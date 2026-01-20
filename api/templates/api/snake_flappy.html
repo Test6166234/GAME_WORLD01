@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SNAKE-FLAPPY 2026 | ELITE EDITION</title>
+    <link href="https://fonts.googleapis.com" rel="stylesheet">
+    <style>
+        :root { --neon: #00f2ff; --bg: #010204; --metal: #0d0f12; }
+        * { box-sizing: border-box; touch-action: manipulation; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Exo 2', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
+
+        /* ЭЛИТНЫЙ ФОН И ЛИНИЯ */
+        .scan-line { position: fixed; width: 100%; height: 4px; background: rgba(0, 242, 255, 0.1); top: -10px; box-shadow: 0 0 20px var(--neon); animation: scanning 6s linear infinite; z-index: 1000; pointer-events: none; }
+        @keyframes scanning { 0% { top: -10px; } 100% { top: 100%; } }
+
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; }
+        .cyber-grid { position: fixed; bottom: -50px; left: 0; width: 100%; height: 45%; background-image: linear-gradient(transparent, var(--bg)), linear-gradient(rgba(0, 242, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 255, 0.05) 1px, transparent 1px); background-size: 100% 100%, 60px 60px, 60px 60px; transform: perspective(400px) rotateX(65deg); z-index: -1; opacity: 0.4; animation: grid-move 3s linear infinite; }
+        @keyframes grid-move { 0% { background-position: 0 0; } 100% { background-position: 0 60px; } }
+
+        .game-frame { position: relative; width: 95vw; max-width: 420px; height: 75vh; max-height: 650px; background: rgba(5, 8, 12, 0.8); border: 1px solid #1d2128; border-top: 4px solid var(--neon); box-shadow: 0 0 100px #000; clip-path: polygon(5% 0, 100% 0, 100% 95%, 95% 100%, 0 100%, 0 5%); overflow: hidden; }
+        canvas#game { width: 100%; height: 100%; display: block; filter: contrast(1.1); }
+
+        .hud { position: absolute; top: 25px; width: 100%; text-align: center; font-family: 'Audiowide'; font-size: 55px; color: var(--neon); text-shadow: 0 0 25px var(--neon); pointer-events: none; z-index: 10; letter-spacing: -5px; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(15, 0, 30, 0.98) 0%, #000 100%); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(15px); }
+
+        .btn-cyber { background: var(--metal); border: 1px solid var(--neon); color: var(--neon); padding: 16px 40px; font-family: 'Exo 2'; font-weight: 900; cursor: pointer; text-transform: uppercase; margin: 10px; clip-path: polygon(15% 0, 100% 0, 85% 100%, 0 100%); transition: 0.4s; font-size: 11px; letter-spacing: 2px; }
+        .btn-cyber:hover { background: var(--neon); color: #000; box-shadow: 0 0 40px var(--neon); transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+<div class="scan-line"></div>
+<canvas id="bg-canvas"></canvas>
+<div class="cyber-grid"></div>
+
+<div class="game-frame">
+    <div class="hud" id="score">00</div>
+    <div class="overlay" id="overScreen">
+        <div style="color:#ae00ff; font-size:9px; letter-spacing:6px; margin-bottom:10px;">NEURAL_SYNC_LOST</div>
+        <div id="finalScore" style="font-size:80px; font-family:'Audiowide'; color:#fff; text-shadow:0 0 40px #ae00ff;">0</div>
+        <button class="btn-cyber" onclick="reset()">REINITIALIZE</button>
+    </div>
+    <canvas id="game"></canvas>
+</div>
+
+<div style="display:flex; gap:12px; margin-top:25px; z-index:20;">
+    <button class="btn-cyber" style="border-color:#333; opacity:0.7;" onclick="location.href='/'">HUB</button>
+    <button id="saveBtn" class="btn-cyber" disabled>UPLOAD_RECORDS</button>
+</div>
+
+{% csrf_token %}
+
+<script>
+    const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+    const bgCanvas = document.getElementById('bg-canvas'), bgCtx = bgCanvas.getContext('2d');
+    const scoreEl = document.getElementById('score'), overScreen = document.getElementById('overScreen');
+    const saveBtn = document.getElementById('saveBtn');
+
+    let w, h, y, v, score, active, pipes, trail, theme, stars = [];
+
+    // ЭЛИТНЫЙ БАЛАНС: Сложно в начале, комфортно потом
+    let currentG, currentJump, currentSpeed;
+
+    function initStars() {
+        bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
+        stars = [];
+        for(let i=0; i<200; i++) stars.push({ x: Math.random()*bgCanvas.width, y: Math.random()*bgCanvas.height, s: Math.random()*2, o: Math.random() });
+    }
+
+    function drawWorld() {
+        bgCtx.fillStyle = '#010204'; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+        let g = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/2, 50, bgCanvas.width/2, bgCanvas.height/2, 700);
+        g.addColorStop(0, `rgba(40, 0, 80, 0.15)`); g.addColorStop(1, 'transparent');
+        bgCtx.fillStyle = g; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+        stars.forEach(s => {
+            s.x -= s.s * 0.4; if(s.x < 0) s.x = bgCanvas.width;
+            bgCtx.fillStyle = `rgba(255, 255, 255, ${s.o})`;
+            bgCtx.beginPath(); bgCtx.arc(s.x, s.y, s.s, 0, Math.PI*2); bgCtx.fill();
+        });
+        requestAnimationFrame(drawWorld);
+    }
+
+    function reset() {
+        y = h / 2; v = 0; score = 0; active = true; pipes = []; trail = [];
+        theme = '#00f2ff'; scoreEl.textContent = "00";
+        overScreen.style.display = 'none'; saveBtn.disabled = true;
+        updateDifficulty();
+        render();
+    }
+
+    function updateDifficulty() {
+        if (score < 10) { // ХАРДКОРНЫЙ СТАРТ
+            currentG = 0.45; currentJump = -7.5; currentSpeed = 3.8;
+        } else if (score < 30) { // СБАЛАНСИРОВАННЫЙ МИДЛ
+            currentG = 0.38; currentJump = -7.0; currentSpeed = 3.5;
+        } else { // ЭЛИТНЫЙ ФИНАЛ (СКОРОСТЬ ВЫСОКАЯ, НО КОНТРОЛЬ ЛЕГКИЙ)
+            currentG = 0.32; currentJump = -6.5; currentSpeed = 4.5;
+        }
+    }
+
+    function render() {
+        if (!active) return;
+        ctx.fillStyle = "rgba(5, 8, 12, 0.35)"; ctx.fillRect(0, 0, w, h);
+
+        v += currentG; y += v;
+        updateDifficulty();
+
+        // ХВОСТ (ЭЛИТНЫЙ ШЛЕЙФ)
+        trail.push({x: w * 0.22, y: y});
+        if (trail.length > 35) trail.shift();
+        for (let i = 0; i < trail.length; i++) {
+            let p = i / trail.length;
+            ctx.beginPath(); ctx.fillStyle = theme; ctx.globalAlpha = p * 0.4;
+            let drift = Math.sin(Date.now() * 0.01 + i * 0.3) * 6;
+            ctx.arc(trail[i].x - (trail.length - i) * 6, trail[i].y + drift, 12 * p, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // ГОЛОВА
+        ctx.globalAlpha = 1; ctx.shadowBlur = 30; ctx.shadowColor = theme;
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(w * 0.22, y, 11, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // ТРУБЫ С ПУЛЬСИРУЮЩИМ ЯДРОМ
+        if (pipes.length === 0 || pipes[pipes.length - 1].x < w * 0.55) {
+            let gap = score < 10 ? 140 : (score < 30 ? 160 : 180); // Шире в конце!
+            pipes.push({ x: w, t: Math.random() * (h - gap - 100) + 50, g: gap, p: false });
+        }
+
+        pipes.forEach(p => {
+            p.x -= currentSpeed;
+            ctx.strokeStyle = theme; ctx.lineWidth = 3;
+            ctx.strokeRect(p.x, 0, 45, p.t); ctx.strokeRect(p.x, p.t + p.g, 45, h);
+
+            // ЯДРО
+            let pulse = 0.1 + Math.sin(Date.now()*0.01)*0.05;
+            ctx.fillStyle = theme; ctx.globalAlpha = pulse;
+            ctx.fillRect(p.x + 10, 0, 25, p.t); ctx.fillRect(p.x + 10, p.t + p.g, 25, h);
+            ctx.globalAlpha = 1;
+
+            if (!p.p && p.x < w * 0.22) {
+                p.p = true; score++;
+                scoreEl.textContent = score.toString().padStart(2, '0');
+                saveBtn.disabled = false;
+                if(score % 10 === 0) theme = ['#00f2ff','#ff004c','#00ff41','#ffaa00','#ae00ff'][Math.floor(Math.random()*5)];
+            }
+            if (p.x < w*0.22 + 10 && p.x + 45 > w*0.22 - 10 && (y - 10 < p.t || y + 10 > p.t + p.g)) die();
+        });
+
+        if (y < 0 || y > h) die();
+        if (active) requestAnimationFrame(render);
+    }
+
+    function die() {
+        active = false; document.getElementById('finalScore').textContent = score;
+        overScreen.style.display = 'flex';
+    }
+
+    function jump() {
+        if (active) v = currentJump;
+        else if (overScreen.style.display === 'flex') reset();
+    }
+
+    window.addEventListener('keydown', e => { if(e.code === 'Space' || e.code === 'ArrowUp') jump(); });
+    window.addEventListener('touchstart', e => { e.preventDefault(); jump(); }, {passive: false});
+    canvas.addEventListener('mousedown', e => { e.preventDefault(); jump(); });
+    window.addEventListener('resize', () => {
+        const rect = canvas.parentNode.getBoundingClientRect();
+        canvas.width = rect.width; canvas.height = rect.height;
+        w = canvas.width; h = canvas.height;
+        initStars();
+    });
+
+    saveBtn.onclick = () => {
+        const token = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const formData = new FormData();
+        formData.append('score', score);
+        fetch('/api/snake_scores/', { method: 'POST', headers: { 'X-CSRFToken': token }, body: formData })
+        .then(res => { if(res.ok) { saveBtn.textContent = "UPLOADED"; saveBtn.disabled = true; } });
+    };
+
+    window.dispatchEvent(new Event('resize')); drawWorld(); reset();
+</script>
+</body>
+</html>

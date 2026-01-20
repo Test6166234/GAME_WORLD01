@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>УПРАВЛЕНИЕ МИССИЯМИ 2026</title>
+    <link href="https://fonts.googleapis.com" rel="stylesheet">
+    <style>
+        :root {
+            --metal: #121418;
+            --border: #2d323a;
+            --neon: #00f2ff;
+            --danger: #ff004c;
+            --success: #00ff41;
+            --glare: rgba(255, 255, 255, 0.03);
+        }
+
+        body {
+            margin: 0;
+            background: #08090b;
+            color: #cfd8e3;
+            font-family: 'Exo 2', sans-serif;
+            padding: 20px;
+            background-image: radial-gradient(circle at 50% 50%, #16181d 0%, #08090b 100%);
+            min-height: 100vh;
+        }
+
+        /* Фоновая сетка как в главном меню */
+        body::before {
+            content: "";
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px; opacity: 0.1; z-index: -1;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        /* Заголовок в стиле HUD */
+        h1 {
+            font-family: 'Audiowide', cursive;
+            text-align: center;
+            color: var(--neon);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+            margin-bottom: 30px;
+        }
+
+        /* Панель ввода задач */
+        .input-area {
+            background: var(--metal);
+            border: 1px solid var(--border);
+            padding: 20px;
+            margin-bottom: 30px;
+            clip-path: polygon(5% 0, 100% 0, 100% 70%, 95% 100%, 0 100%, 0 30%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input, textarea {
+            padding: 12px;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-family: 'Exo 2';
+            transition: 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--neon);
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+        }
+
+        .btn-action, .back-btn {
+            padding: 10px 25px;
+            border: 1px solid var(--neon);
+            background: transparent;
+            color: var(--neon);
+            font-family: 'Audiowide';
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            text-decoration: none;
+        }
+
+        .btn-action:hover, .back-btn:hover {
+            background: var(--neon);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon);
+        }
+
+        /* Доска и колонки */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .column {
+            background: rgba(18, 20, 24, 0.8);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--neon);
+            padding: 15px;
+            min-height: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .column h3 {
+            font-family: 'Audiowide';
+            text-align: center;
+            color: #fff;
+            margin-top: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        /* Карточки задач */
+        .task-card {
+            background: var(--metal);
+            border: 1px solid var(--border);
+            margin: 15px 0;
+            padding: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+            clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%);
+        }
+
+        .task-card:hover {
+            border-color: var(--neon);
+            transform: translateX(5px);
+            background: #1a1d24;
+        }
+
+        .task-card strong {
+            color: var(--neon);
+            display: block;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .task-card a {
+            color: #6a7686;
+            font-size: 0.75rem;
+            text-decoration: none;
+            border-bottom: 1px dashed #6a7686;
+        }
+
+        .task-card.selected {
+            border-color: var(--success);
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        }
+
+        /* Скроллбар */
+        .column::-webkit-scrollbar { width: 4px; }
+        .column::-webkit-scrollbar-thumb { background: var(--border); }
+
+        .scan-line {
+            position: fixed; width: 100%; height: 4px; background: rgba(0, 242, 255, 0.1);
+            top: -10px; box-shadow: 0 0 20px var(--neon);
+            animation: scanning 8s linear infinite; z-index: 1000; pointer-events: none;
+        }
+        @keyframes scanning { 0% { top: -10px; } 100% { top: 100%; } }
+    </style>
+</head>
+<body>
+
+<div class="scan-line"></div>
+
+<div class="container">
+    <div style="margin-top: 20px;">
+        <a href="{% url 'main_menu' %}" class="back-btn">← ТЕРМИНАЛ</a>
+    </div>
+
+    <h1>Система Задач v2.0</h1>
+
+    <div class="input-area">
+        <input id="title" placeholder="НАЗВАНИЕ МИССИИ">
+        <textarea id="desc" placeholder="ДЕТАЛИ ОПЕРАЦИИ" rows="2"></textarea>
+        <button onclick="addTask()" class="btn-action" id="addBtn">РАЗВЕРНУТЬ ЗАДАЧУ</button>
+    </div>
+
+    <div class="board">
+        <div class="column" id="todo"><h3>TODO</h3></div>
+        <div class="column" id="in_progress"><h3>ACTIVE</h3></div>
+        <div class="column" id="done"><h3>COMPLETE</h3></div>
+    </div>
+</div>
+
+<script>
+const todo = document.getElementById('todo');
+const in_progress = document.getElementById('in_progress');
+const done = document.getElementById('done');
+const columnMap = { todo, in_progress, done };
+let selectedTask = null;
+
+function getCookie(name) {
+    return document.cookie.split('; ').find(r => r.startsWith(name))?.split('=')[1];
+}
+
+function renderTask(t) {
+    const el = document.createElement('div');
+    el.className = 'task-card';
+    el.dataset.id = t.id;
+    el.dataset.status = t.status;
+    el.innerHTML = `<strong>${t.title}</strong><a href="/task/${t.id}/" target="_blank">LOGS ></a>`;
+
+    el.addEventListener('click', async () => {
+        if (selectedTask === el) {
+            const next = { 'todo': 'in_progress', 'in_progress': 'done', 'done': 'todo' };
+            const newStatus = next[el.dataset.status];
+
+            const res = await fetch(`/api/tasks/${t.id}/`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ status: newStatus }),
+                credentials: 'include'
+            });
+
+            if (res.ok) {
+                el.dataset.status = newStatus;
+                columnMap[newStatus].appendChild(el);
+            }
+
+            el.classList.remove('selected');
+            selectedTask = null;
+        } else {
+            if (selectedTask) selectedTask.classList.remove('selected');
+            selectedTask = el;
+            el.classList.add('selected');
+        }
+    });
+
+    columnMap[t.status].appendChild(el);
+}
+
+async function loadTasks() {
+    const res = await fetch('/api/tasks/', { credentials: 'include' });
+    const tasks = await res.json();
+    tasks.forEach(renderTask);
+}
+
+async function addTask() {
+    const titleEl = document.getElementById('title');
+    const descEl = document.getElementById('desc');
+    const title = titleEl.value.trim();
+    const desc = descEl.value.trim();
+    if (!title) return;
+
+    const res = await fetch('/api/tasks/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        credentials: 'include',
+        body: JSON.stringify({ title, description: desc, status: 'todo' })
+    });
+
+    if (res.ok) {
+        const task = await res.json();
+        renderTask(task);
+        titleEl.value = '';
+        descEl.value = '';
+    }
+}
+
+loadTasks();
+</script>
+
+</body>
+</html>

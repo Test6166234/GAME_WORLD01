@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>АРХИВ ДАННЫХ 2026 | НОВОСТИ</title>
+    <link href="https://fonts.googleapis.com" rel="stylesheet">
+    <style>
+        :root {
+            --metal: #121418;
+            --border: #2d323a;
+            --neon: #00f2ff;
+            --danger: #ff004c;
+            --gold: #ffaa00;
+        }
+
+        body {
+            margin: 0;
+            background: #08090b;
+            color: #cfd8e3;
+            font-family: 'Exo 2', sans-serif;
+            padding: 20px;
+            background-image: radial-gradient(circle at 50% 50%, #16181d 0%, #08090b 100%);
+        }
+
+        /* Фоновая сетка */
+        body::before {
+            content: "";
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                              linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px; opacity: 0.1; z-index: -1;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; }
+
+        .header-back {
+            display: flex; align-items: center; gap: 20px; margin-bottom: 30px;
+        }
+
+        .btn-back {
+            background: var(--metal); border: 1px solid var(--border); color: var(--neon);
+            padding: 10px 20px; cursor: pointer; text-decoration: none; font-weight: bold;
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+            transition: 0.3s; font-size: 0.8rem;
+        }
+
+        .btn-back:hover { background: var(--border); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); }
+
+        h1 {
+            font-family: 'Audiowide', cursive; color: var(--neon);
+            text-transform: uppercase; letter-spacing: 3px; margin: 0;
+            text-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+
+        .news-grid { display: flex; flex-direction: column; gap: 20px; }
+
+        .news-card {
+            background: var(--metal); border: 1px solid var(--border);
+            padding: 25px; position: relative;
+            clip-path: polygon(0 0, 97% 0, 100% 15%, 100% 100%, 3% 100%, 0 85%);
+            transition: 0.3s;
+        }
+
+        .news-card::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon);
+        }
+
+        .news-card:hover {
+            border-color: var(--neon); transform: scale(1.01);
+            background: #1a1d24;
+        }
+
+        .news-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 10px;
+        }
+
+        .news-tag {
+            font-size: 0.7rem; background: rgba(0, 242, 255, 0.1); color: var(--neon);
+            padding: 4px 10px; font-weight: bold; text-transform: uppercase;
+        }
+
+        .news-date { font-size: 0.8rem; color: #6a7686; }
+
+        .news-card h2 {
+            margin: 0 0 10px 0; font-size: 1.3rem; color: #fff;
+            font-family: 'Audiowide', sans-serif;
+        }
+
+        .news-content {
+            line-height: 1.6; color: #cfd8e3; margin-bottom: 20px; font-size: 0.95rem;
+        }
+
+        .btn-action {
+            display: inline-block; padding: 8px 20px;
+            background: transparent; border: 1px solid var(--neon); color: var(--neon);
+            text-decoration: none; font-weight: bold; font-size: 0.8rem;
+            text-transform: uppercase; transition: 0.3s;
+        }
+
+        .btn-action:hover {
+            background: var(--neon); color: var(--metal);
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+        }
+
+        .empty-msg {
+            text-align: center; padding: 50px; border: 1px dashed var(--border);
+            color: #6a7686;
+        }
+
+        /* Анимация сканирования как в главном меню */
+        .scan-line {
+            position: fixed; width: 100%; height: 4px; background: rgba(0, 242, 255, 0.1);
+            top: -10px; box-shadow: 0 0 20px var(--neon);
+            animation: scanning 8s linear infinite; z-index: 1000; pointer-events: none;
+        }
+        @keyframes scanning { 0% { top: -10px; } 100% { top: 100%; } }
+    </style>
+</head>
+<body>
+
+<div class="scan-line"></div>
+
+<div class="container">
+    <div class="header-back">
+        <a href="{% url 'main_menu' %}" class="btn-back">« НАЗАД В ХАБ</a>
+        <h1>Архив Новостей</h1>
+    </div>
+
+    <div class="news-grid">
+        {% for news in news_list %}
+        <article class="news-card">
+            <div class="news-header">
+                <div>
+                    <span class="news-tag">{{ news.get_game_type_display }}</span>
+                    <div class="news-date">{{ news.date|date:"d.m.Y" }}</div>
+                </div>
+                <div style="color: var(--neon); opacity: 0.3;">DATA_ID: {{ news.id }}</div>
+            </div>
+
+            <h2>{{ news.title }}</h2>
+
+            <div class="news-content">
+                {{ news.content|linebreaks }}
+            </div>
+
+            {% if news.game_type == 'snake' %}
+                <a href="{% url 'snake_flappy' %}" class="btn-action">Запустить Змейку</a>
+            {% elif news.game_type == 'clicker' %}
+                <a href="{% url 'clicker' %}" class="btn-action">Перейти к Кликеру</a>
+            {% elif news.game_type == 'tank' %}
+                <a href="{% url 'tank_battle' %}" class="btn-action">В бой на танках</a>
+            {% else %}
+                <a href="{% url 'main_menu' %}" class="btn-action">Инфоцентр</a>
+            {% endif %}
+        </article>
+        {% empty %}
+        <div class="empty-msg">
+            <p>Входящих зашифрованных сообщений не обнаружено.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>

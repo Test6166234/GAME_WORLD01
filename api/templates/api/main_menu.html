@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>МОЯ ИГРОВАЯ ВСЕЛЕННАЯ 2026</title>
+    <link href="https://fonts.googleapis.com" rel="stylesheet">
+    <style>
+        :root {
+            --metal: #121418; --border: #2d323a; --neon: #00f2ff;
+            --danger: #ff004c; --gold: #ffaa00;
+        }
+        body {
+            margin: 0; background: #08090b; color: #cfd8e3; font-family: 'Exo 2', sans-serif; padding: 20px;
+            background-image: radial-gradient(circle at 50% 50%, #16181d 0%, #08090b 100%);
+        }
+        body::before {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px; opacity: 0.1; z-index: -1;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .hud-top {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--metal); padding: 25px; border: 2px solid var(--border);
+            border-top: 4px solid var(--neon); clip-path: polygon(0 0, 100% 0, 98% 100%, 2% 100%);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 30px;
+        }
+        .hud-title h1 {
+            font-family: 'Audiowide', cursive; margin: 0; font-size: 1.8rem;
+            letter-spacing: 2px; color: var(--neon); text-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+        .module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+        .module-card {
+            background: var(--metal); border: 1px solid var(--border); padding: 30px;
+            position: relative; cursor: pointer; transition: 0.3s;
+            clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
+        }
+        .module-card:hover { border-color: var(--neon); transform: translateY(-5px); background: #1a1d24; }
+        .module-card h3 { font-weight: 900; font-size: 1.1rem; color: var(--neon); margin: 0; text-transform: uppercase; }
+        .module-status { font-size: 11px; color: #6a7686; margin-top: 5px; line-height: 1.4; }
+
+        .data-sector { margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; align-items: start; }
+        .data-panel { background: rgba(18, 20, 24, 0.8); border: 1px solid var(--border); padding: 20px; border-radius: 4px; }
+        .data-panel h2 { font-size: 0.9rem; color: #fff; text-transform: uppercase; margin: 0 0 15px 0; display: flex; align-items: center; }
+        .data-panel h2::before { content: ""; width: 4px; height: 15px; background: var(--neon); margin-right: 10px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); align-items: center; }
+        .rank-val { color: var(--neon); font-weight: bold; font-family: 'Audiowide'; }
+        .btn-exit { background: none; border: 1px solid var(--danger); color: var(--danger); padding: 6px 15px; font-weight: bold; cursor: pointer; font-size: 0.7rem; }
+        .scan-line { position: fixed; width: 100%; height: 4px; background: rgba(0, 242, 255, 0.1); top: -10px; animation: scanning 8s linear infinite; pointer-events: none; }
+        @keyframes scanning { 0% { top: -10px; } 100% { top: 100%; } }
+    </style>
+</head>
+<body>
+<div class="scan-line"></div>
+<div class="container">
+    <header class="hud-top">
+        <div class="hud-title">
+            <div style="font-size: 10px; color: #6a7686;">ЛИЧНОЕ ПРОСТРАНСТВО</div>
+            <h1>ИГРОВОЙ МИР 2026</h1>
+        </div>
+        <div>
+            {% if user.is_authenticated %}
+            <div style="font-size: 10px; color: #6a7686; text-align: right;">ПИЛОТ: {{ user.username }}</div>
+            <form method="POST" action="{% url 'logout' %}">
+                {% csrf_token %}<button type="submit" class="btn-exit">ВЫЙТИ</button>
+            </form>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="module-grid">
+        <div class="module-card" onclick="location.href='{% url 'snake_flappy' %}'">
+            <h3>Snake Flappy</h3>
+            <div class="module-status">Рекорд: {{ best_snake }} PTS</div>
+        </div>
+
+        <div class="module-card" onclick="location.href='{% url 'clicker' %}'">
+            <h3>Clicker</h3>
+            <div class="module-status">
+                РЕКОРД 1с: {{ best_1s_cps }} CPS<br>
+                РЕКОРД 10с: {{ best_10s_score }} CLKS ({% widthratio best_10s_score 10 1 %} CPS)
+            </div>
+        </div>
+
+        <div class="module-card" onclick="location.href='{% url 'ne_tank' %}'">
+            <h3>Танки</h3>
+            <div class="module-status">Рекорд: {{ best_tank }} XP</div>
+        </div>
+        <div class="module-card" onclick="location.href='{% url 'kanban' %}'">
+            <h3>Мои дела</h3>
+            <div class="module-status">Задачи и планы</div>
+        </div>
+        <div class="module-card" onclick="location.href='/api/'">
+            <h3>Ядро</h3>
+            <div class="module-status">Настройки API</div>
+        </div>
+        <div class="module-card" onclick="location.href='/api/docs/'" style="border-color: #85ea2d;">
+            <h3 style="color: #85ea2d;">Swagger</h3>
+            <div class="module-status">Документация системы</div>
+        </div>
+    </main>
+
+    <section class="data-sector">
+        <div class="data-panel">
+            <h2>🐍 Топ Флеппи_Змейка</h2>
+            {% for p in top_snake_players %}
+                <div class="rank-item"><span>{{ p.username }}</span><span class="rank-val">{{ p.max_score }}</span></div>
+            {% empty %}<div class="rank-item">Данных нет</div>{% endfor %}
+        </div>
+
+        <div class="data-panel">
+            <h2>🖱️ Топ Кликер (10 секунд)</h2>
+            {% for p in top_clicker_players %}
+                <div class="rank-item">
+                    <span>{{ p.user.username }}</span>
+                    <div style="text-align: right;">
+                        <span class="rank-val">{{ p.max_score }} PTS</span>
+                        <div style="font-size: 9px; color: #6a7686;">{% widthratio p.max_score 10 1 %} CPS</div>
+                    </div>
+                </div>
+            {% empty %}<div class="rank-item">Данных нет</div>{% endfor %}
+        </div>
+
+        <div class="data-panel">
+            <h2>🚜 Топ Танки</h2>
+            {% for p in top_tank_players %}
+                <div class="rank-item"><span>{{ p.user.username }}</span><span class="rank-val" style="color: var(--gold);">{{ p.max_score }} XP</span></div>
+            {% empty %}<div class="rank-item">Данных нет</div>{% endfor %}
+        </div>
+
+        <div class="data-panel">
+            <h2>📊 Система</h2>
+            <div class="rank-item"><span>Вход</span><span>{{ user.last_login|date:"d.m.Y H:i" }}</span></div>
+            <div class="rank-item"><span>Сервер</span><span class="rank-val" style="color: #00ff41;">ONLINE</span></div>
+        </div>
+    </section>
+</div>
+</body>
+</html>

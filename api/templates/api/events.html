@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ТЕРМИНАЛ СОБЫТИЙ 2026</title>
+    <link href="https://fonts.googleapis.com" rel="stylesheet">
+    <style>
+        :root {
+            --metal: #121418;
+            --border: #2d323a;
+            --neon: #00f2ff;
+            --danger: #ff004c;
+            --event-gold: #ffaa00;
+        }
+
+        body {
+            margin: 0;
+            background: #08090b;
+            color: #cfd8e3;
+            font-family: 'Exo 2', sans-serif;
+            padding: 20px;
+            background-image: radial-gradient(circle at 50% 50%, #16181d 0%, #08090b 100%);
+        }
+
+        /* Фоновая сетка */
+        body::before {
+            content: "";
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                              linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px; opacity: 0.1; z-index: -1;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        .header-section {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px; border-bottom: 2px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        .btn-back {
+            background: var(--metal); border: 1px solid var(--border); color: var(--neon);
+            padding: 10px 20px; text-decoration: none; font-weight: bold;
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+            transition: 0.3s; font-size: 0.8rem; text-transform: uppercase;
+        }
+
+        .btn-back:hover { border-color: var(--neon); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); }
+
+        h1 {
+            font-family: 'Audiowide', cursive; color: var(--neon);
+            letter-spacing: 4px; margin: 0; font-size: 2rem;
+            text-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+        }
+
+        .event-list { display: grid; gap: 25px; }
+
+        .event-item {
+            background: var(--metal); border: 1px solid var(--border);
+            position: relative; display: flex; overflow: hidden;
+            clip-path: polygon(2% 0, 100% 0, 100% 85%, 98% 100%, 0 100%, 0 15%);
+            transition: 0.3s;
+        }
+
+        .event-item:hover {
+            border-color: var(--event-gold);
+            transform: translateX(10px);
+            background: #1a1d24;
+        }
+
+        /* Индикатор категории слева */
+        .event-sidebar {
+            width: 8px; background: var(--neon);
+        }
+        .cat-mission { background: var(--event-gold); }
+        .cat-tournament { background: var(--danger); }
+
+        .event-body { padding: 25px; flex-grow: 1; }
+
+        .event-meta {
+            display: flex; justify-content: space-between;
+            font-size: 0.7rem; text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 10px; color: #6a7686;
+        }
+
+        .event-title {
+            font-family: 'Audiowide', sans-serif; font-size: 1.4rem;
+            color: #fff; margin-bottom: 10px;
+        }
+
+        .event-desc { line-height: 1.5; color: #cfd8e3; margin-bottom: 20px; font-size: 0.9rem; }
+
+        .event-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;
+        }
+
+        .deadline {
+            font-family: 'Audiowide'; color: var(--danger); font-size: 0.8rem;
+        }
+
+        .game-tag {
+            background: rgba(0, 242, 255, 0.1); color: var(--neon);
+            padding: 4px 12px; font-size: 0.7rem; font-weight: 900;
+        }
+
+        .empty-state {
+            text-align: center; padding: 100px 20px;
+            border: 2px dashed var(--border); color: #6a7686;
+        }
+
+        .scan-line {
+            position: fixed; width: 100%; height: 4px; background: rgba(0, 242, 255, 0.1);
+            top: -10px; box-shadow: 0 0 20px var(--neon);
+            animation: scanning 8s linear infinite; z-index: 1000; pointer-events: none;
+        }
+        @keyframes scanning { 0% { top: -10px; } 100% { top: 100%; } }
+    </style>
+</head>
+<body>
+
+<div class="scan-line"></div>
+
+<div class="container">
+    <div class="header-section">
+        <h1>АКТИВНЫЕ МИССИИ</h1>
+        <a href="{% url 'main_menu' %}" class="btn-back">Выход в штаб</a>
+    </div>
+
+    <div class="event-list">
+        {% for event in events %}
+            <div class="event-item">
+                <!-- Цвет полоски зависит от категории -->
+                <div class="event-sidebar {% if event.category == 'tournament' %}cat-tournament{% elif event.category == 'mission' %}cat-mission{% endif %}"></div>
+
+                <div class="event-body">
+                    <div class="event-meta">
+                        <span>ID: EVT-0{{ event.id }} // TYPE: {{ event.get_category_display }}</span>
+                        <span class="game-tag">{{ event.get_game_type_display }}</span>
+                    </div>
+
+                    <div class="event-title">{{ event.title }}</div>
+
+                    <div class="event-desc">{{ event.description }}</div>
+
+                    <div class="event-footer">
+                        <div class="deadline">ДО ЗАВЕРШЕНИЯ: {{ event.end_time|date:"d.m.Y H:i" }}</div>
+                        <a href="{% if event.game_type == 'snake' %}{% url 'snake_flappy' %}{% elif event.game_type == 'tank' %}{% url 'tank_battle' %}{% else %}{% url 'main_menu' %}{% endif %}"
+                           class="btn-back" style="padding: 5px 15px;">Участвовать</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state">
+                <div style="font-size: 3rem; margin-bottom: 20px;">📡</div>
+                <h2>СИГНАЛОВ НЕ ОБНАРУЖЕНО</h2>
+                <p>В данный момент активных спецопераций не проводится.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>

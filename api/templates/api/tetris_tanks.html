@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NE TANK 2026: ELITE DEMO</title>
+<style>
+    :root{--neon:#00f2ff;--danger:#ff004c;--gold:#ffee00;--bg:#020205;}
+    body{margin:0;background:var(--bg);color:#fff;font-family:sans-serif;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+    #game-container{position:relative;border:3px solid #333;background:#000;box-shadow:0 0 60px rgba(0,242,255,0.2);overflow:hidden;}
+    canvas{display:block;image-rendering:pixelated;}
+    #ui-top{position:absolute;top:20px;width:90%;left:5%;display:flex;justify-content:space-between;z-index:10;pointer-events:none;}
+    .stat-label{font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:2px;}
+    .stat-val{font-size:22px;font-weight:900;text-shadow:0 0 15px var(--neon);font-family: monospace;}
+    .overlay{display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);flex-direction:column;justify-content:center;align-items:center;z-index:100;backdrop-filter:blur(10px);}
+    .cyber-btn{padding:15px 40px;border:1px solid var(--neon);background:transparent;color:var(--neon);cursor:pointer;text-transform:uppercase;margin:10px;font-weight:900;transition:0.3s;width:320px;clip-path:polygon(10% 0, 100% 0, 90% 100%, 0% 100%);font-size: 1rem;}
+    .cyber-btn:hover{background:var(--neon);color:#000;box-shadow:0 0 40px var(--neon);transform: scale(1.05);}
+    #super-bar-container{position:absolute;bottom:0;left:0;width:100%;height:8px;background:#111;}
+    #super-bar{height:100%;width:0%;background:var(--gold);box-shadow:0 0 25px var(--gold);transition:width 0.3s;}
+    .shake{animation:shake 0.3s cubic-bezier(.36,.07,.19,.97) both;}
+    @keyframes shake{10%,90%{transform:translate3d(-2px,0,0)}20%,80%{transform:translate3d(3px,0,0)}30%,50%,70%{transform:translate3d(-4px,0,0)}40%,60%{transform:translate3d(4px,0,0)}}
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- КНОПКА НАЗАД В МЕНЮ (ДЛЯ DJANGO) -->
+    <button onclick="window.location.href='/'" style="position:absolute; top:85px; left:20px; z-index:150; background:rgba(20,20,20,0.8); border:1px solid var(--neon); color:var(--neon); cursor:pointer; font-size:11px; padding:8px 15px; text-transform:uppercase; font-weight:900; clip-path:polygon(10% 0, 100% 0, 90% 100%, 0% 100%);">
+        ← В МЕНЮ
+    </button>
+
+    <div id="ui-top">
+        <div><div class="stat-label">КОРПУС</div><div id="hp_val" class="stat-val">100%</div></div>
+        <div style="text-align:right;"><div class="stat-label">ДАННЫЕ</div><div id="score_val" class="stat-val">0</div></div>
+    </div>
+
+    <div id="mode-menu" class="overlay" style="display:flex;">
+        <h1 style="color:var(--neon);font-size:4rem;margin:0;letter-spacing:15px;text-shadow:0 0 20px var(--neon);">NE TANK</h1>
+        <p style="color:var(--gold);margin-bottom:40px;letter-spacing:4px;">ЭКЗАМЕНАЦИОННАЯ СБОРКА 2026</p>
+        <button class="cyber-btn" onclick="startGame()">ЗАПУСК СИСТЕМЫ</button>
+        <button class="cyber-btn" onclick="window.location.href='/'" style="border-color:#444;color:#666;">НАЗАД В ХАБ</button>
+    </div>
+
+    <div id="perk-menu" class="overlay">
+        <h2 style="color:var(--gold);letter-spacing:5px;">МОДЕРНИЗАЦИЯ</h2>
+        <div id="perk-list" style="display:flex; flex-direction:column; align-items:center;"></div>
+    </div>
+
+    <div id="game-over" class="overlay">
+        <h1 style="color:var(--danger);font-size:3rem;">ОТКАЗ СИСТЕМ</h1>
+        <h2 id="final-score-ui" style="font-size:5rem;color:var(--gold);">0</h2>
+        <button id="save-btn" class="cyber-btn" onclick="saveResult()">СИНХРОНИЗИРОВАТЬ</button>
+        <button class="cyber-btn" onclick="location.reload()">ПЕРЕЗАГРУЗКА</button>
+        <button class="cyber-btn" onclick="window.location.href='/'" style="border-color:#444;color:#666;">В ГЛАВНОЕ МЕНЮ</button>
+    </div>
+
+    <canvas id="gameCanvas" width="450" height="650"></canvas>
+    <div id="super-bar-container"><div id="super-bar"></div></div>
+</div>
+
+<script>
+const canvas=document.getElementById('gameCanvas'), ctx=canvas.getContext('2d'), GRID=45;
+let score=0, hp=10, energy=0, gameOver=false, paused=true, ult=false, difficulty=1, numBuffer="";
+let player={x:4.5, y:12, vx:0, lastShot:0, bullets:[], triple:0, fireRate:280};
+let enemies=[], enemyBullets=[], particles=[], nextPerkScore=1500;
+
+// Маски танков
+const P_MASK=[[0,0,0,1,1,0,0,0],[0,0,1,1,1,1,0,0],[0,1,1,1,1,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[1,0,1,1,1,1,0,1]];
+const E_MASK=[[1,0,0,1,1,0,0,1],[0,1,1,1,1,1,1,0],[1,1,0,1,1,0,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,1,1,0,0,1,1,0],[1,1,0,0,0,0,1,1]];
+
+let perks = [
+    {id:'rf', n:'ГИПЕР-СТРЕЛЬБА', d:'Повышенная скорострельность', f:()=>{player.fireRate=120}},
+    {id:'ts', n:'ТРОЙНОЙ СТВОЛ', d:'Постоянная стрельба веером', f:()=>{player.triple=9999}},
+    {id:'hp', n:'НАНО-РЕМОНТ', d:'Восстановление +10 HP', f:()=>{hp+=10}},
+    {id:'eg', n:'ЯДЕРНЫЙ ЗАРЯД', d:'Мгновенная энергия X-удара', f:()=>{energy=100}}
+];
+
+function getCookie(name){ let v=document.cookie.match('(^|;) ?'+name+'=([^;]*)(;|$)'); return v?decodeURIComponent(v[2]):null; }
+function startGame(){ document.getElementById('mode-menu').style.display='none'; paused=false; render(); }
+
+async function saveResult(){
+    const b=document.getElementById('save-btn'); b.innerText="ОТПРАВКА...";
+    try {
+        const r=await fetch('/api/ne_tank/', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+            body:JSON.stringify({score:score})
+        });
+        if(r.ok) b.innerText="УСПЕШНО"; else b.innerText="ОШИБКА";
+    } catch(e){ b.innerText="СЕТЬ ERR"; }
+}
+
+function showPerks(){
+    paused=true; const m=document.getElementById('perk-menu'), l=document.getElementById('perk-list');
+    m.style.display='flex'; l.innerHTML='';
+    perks.sort(()=>0.5-Math.random()).slice(0,3).forEach(p=>{
+        let b=document.createElement('button'); b.className='cyber-btn'; b.innerHTML=`${p.n}<br><small style="font-size:0.7rem;opacity:0.6">${p.d}</small>`;
+        b.onclick=()=>{ p.f(); perks=perks.filter(x=>x.id!==p.id); m.style.display='none'; paused=false; };
+        l.appendChild(b);
+    });
+}
+
+const keys={};
+window.onkeydown=e=>{
+    keys[e.code]=true; numBuffer+=e.key;
+    if(e.code==='Escape') window.location.href='/';
+    if(numBuffer.endsWith("777")) hp=999;
+    if(numBuffer.endsWith("123")) energy=100;
+    if(numBuffer.length>10) numBuffer=numBuffer.substring(1);
+};
+window.onkeyup=e=>keys[e.code]=false;
+
+function drawUnit(m,tx,ty,color,glow){
+    const s=GRID/8; ctx.save(); if(glow){ctx.shadowBlur=15;ctx.shadowColor=color} ctx.fillStyle=color;
+    m.forEach((row,y)=>row.forEach((p,x)=>{if(p)ctx.fillRect(tx*GRID+x*s,ty*GRID+y*s,s-0.5,s-0.5)}));ctx.restore();
+}
+
+function update(){
+    if(paused||gameOver) return;
+    if(score>=nextPerkScore && perks.length>0){ nextPerkScore+=2000; showPerks(); return; }
+
+    if(keys['ArrowLeft']||keys['KeyA']) player.vx-=0.08;
+    if(keys['ArrowRight']||keys['KeyD']) player.vx+=0.08;
+    player.vx*=0.88; player.x+=player.vx; player.x=Math.max(0, Math.min(9, player.x));
+
+    if(keys['Space'] && Date.now()-player.lastShot>(ult?70:player.fireRate)){
+        player.bullets.push({x:player.x+0.35, y:player.y, vx:0});
+        if(player.triple>0){ player.bullets.push({x:player.x+0.35,y:player.y,vx:-0.12}); player.bullets.push({x:player.x+0.35,y:player.y,vx:0.12}); player.triple--; }
+        player.lastShot=Date.now();
+    }
+    if(keys['KeyX']&&energy>=100&&!ult){ ult=true; let u=setInterval(()=>{energy-=2;if(energy<=0){ult=false;clearInterval(u)}},50); }
+
+    difficulty=1+(score/8000);
+    if(Math.random()<0.015*difficulty) enemies.push({x:Math.random()*9, y:-1, hp:Math.floor(1.5*difficulty), vx:0, isBoss:Math.random()<0.05});
+
+    player.bullets.forEach((b,bi)=>{
+        b.y-=0.45; b.x+=b.vx; if(b.y<-1) player.bullets.splice(bi,1);
+        enemies.forEach((e,ei)=>{
+            if(Math.abs(b.x-e.x)<0.8 && Math.abs(b.y-e.y)<0.8){
+                e.hp-=(ult?10:1); if(!ult) player.bullets.splice(bi,1);
+                if(e.hp<=0){ enemies.splice(ei,1); score+=100; energy=Math.min(100, energy+6); }
+            }
+        });
+    });
+
+    enemies.forEach((e,ei)=>{
+        e.y+=(e.isBoss?0.01:0.03)*difficulty;
+        e.vx+=(e.x<player.x?0.003:-0.003); e.x+=e.vx;
+        if(Math.random()<0.01*difficulty) enemyBullets.push({x:e.x+0.4, y:e.y+0.5, vx:(player.x-e.x)*0.012});
+        if(e.y>14.5 || (Math.abs(e.x-player.x)<0.7 && Math.abs(e.y-player.y)<0.7)){
+            hp--; enemies.splice(ei,1);
+            document.getElementById('game-container').classList.add('shake');
+            setTimeout(()=>document.getElementById('game-container').classList.remove('shake'), 200);
+        }
+    });
+
+    enemyBullets.forEach((eb,bi)=>{
+        eb.y+=0.1*difficulty; eb.x+=eb.vx;
+        if(Math.abs(eb.x-player.x)<0.6 && Math.abs(eb.y-player.y)<0.6){ hp--; enemyBullets.splice(bi,1); }
+        if(eb.y>15) enemyBullets.splice(bi,1);
+    });
+
+    if(hp<=0&&!gameOver){ gameOver=true; document.getElementById('game-over').style.display='flex'; document.getElementById('final-score-ui').innerText=score; }
+    document.getElementById('hp_val').innerText=Math.max(0,hp*10)+"%";
+    document.getElementById('score_val').innerText=score;
+    document.getElementById('super-bar').style.width=energy+"%";
+}
+
+function render(){
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle='rgba(0,242,255,0.05)';
+    for(let i=0;i<canvas.width;i+=GRID){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,canvas.height);ctx.stroke()}
+    update();
+    drawUnit(P_MASK, player.x, player.y, ult?'#fff':'#00f2ff', ult);
+    enemies.forEach(e=>drawUnit(E_MASK, e.x, e.y, e.isBoss?'#ff00ff':'#ff004c', true));
+    player.bullets.forEach(b=>{ctx.fillStyle='#00f2ff'; ctx.fillRect(b.x*GRID+18, b.y*GRID, 4, 15)});
+    enemyBullets.forEach(eb=>{ctx.fillStyle='#ff004c'; ctx.beginPath(); ctx.arc(eb.x*GRID+22, eb.y*GRID+22, 5, 0, 7); ctx.fill()});
+    requestAnimationFrame(render);
+}
+</script>
+</body>
+</html>

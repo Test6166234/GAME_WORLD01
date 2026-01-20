@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Список игроков</title>
+<style>
+body {
+    font-family: sans-serif;
+    margin: 20px;
+    background: #f0f4f8;
+}
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+table {
+    width: 80%;
+    margin: 0 auto;
+    border-collapse: collapse;
+}
+th, td {
+    border: 1px solid #333;
+    padding: 10px;
+    text-align: center;
+}
+th {
+    background: #007bff;
+    color: #fff;
+}
+tr:nth-child(even) {
+    background: #e0e7ff;
+}
+#back-btn {
+    display: block;
+    margin: 0 auto 20px auto;
+    padding: 8px 16px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #007bff;
+    color: #fff;
+    text-align: center;
+}
+#back-btn:hover {
+    background: #0056b3;
+}
+</style>
+</head>
+<body>
+
+<button id="back-btn" onclick="window.location.href='/'">← Назад</button>
+
+<h1>Список игроков</h1>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Имя</th>
+            <th>Очки</th>
+            <th>Последнее посещение</th>
+            <th>Создан</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for player in players %}
+        <tr>
+            <td>{{ player.id }}</td>
+            <td>{{ player.user.username }}</td>
+            <td>{{ player.score }}</td>
+            <td>{{ player.last_seen }}</td>
+            <td>{{ player.created_at }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">Пока нет игроков</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</body>
+</html>
