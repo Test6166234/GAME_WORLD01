@@ -4,7 +4,7 @@ from .models import (
     SnakeScore,
     ClickerScore,
     Task,
-    GameItem,
+
 
 )
 

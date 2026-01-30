@@ -1,6 +1,5 @@
 from rest_framework import viewsets, permissions, authentication
 from django.utils import timezone
-from django.shortcuts import render,  redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
 from django.shortcuts import render, redirect, get_object_or_404
@@ -128,10 +127,7 @@ def clicker_view(request):
     return render(request, 'api/clicker.html')
 
 
-@login_required
-def players_list_view(request):
-    players = Player.objects.all().order_by('-score')
-    return render(request, 'api/players_list.html', {'players': players})
+
 
 @login_required
 def task_detail_view(request, task_id):

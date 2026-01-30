@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NE TANK 2026: ELITE DEMO</title>
+<title>NE TANK 2026</title>
 <style>
     :root{--neon:#00f2ff;--danger:#ff004c;--gold:#ffee00;--bg:#020205;}
     body{margin:0;background:var(--bg);color:#fff;font-family:sans-serif;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:100vh;}
@@ -24,7 +24,7 @@
 <body>
 
 <div id="game-container">
-    <!-- КНОПКА НАЗАД В МЕНЮ (ДЛЯ DJANGO) -->
+
     <button onclick="window.location.href='/'" style="position:absolute; top:85px; left:20px; z-index:150; background:rgba(20,20,20,0.8); border:1px solid var(--neon); color:var(--neon); cursor:pointer; font-size:11px; padding:8px 15px; text-transform:uppercase; font-weight:900; clip-path:polygon(10% 0, 100% 0, 90% 100%, 0% 100%);">
         ← В МЕНЮ
     </button>
@@ -64,14 +64,14 @@ let score=0, hp=10, energy=0, gameOver=false, paused=true, ult=false, difficulty
 let player={x:4.5, y:12, vx:0, lastShot:0, bullets:[], triple:0, fireRate:280};
 let enemies=[], enemyBullets=[], particles=[], nextPerkScore=1500;
 
-// Маски танков
+
 const P_MASK=[[0,0,0,1,1,0,0,0],[0,0,1,1,1,1,0,0],[0,1,1,1,1,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[1,0,1,1,1,1,0,1]];
 const E_MASK=[[1,0,0,1,1,0,0,1],[0,1,1,1,1,1,1,0],[1,1,0,1,1,0,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,1,1,0,0,1,1,0],[1,1,0,0,0,0,1,1]];
 
 let perks = [
     {id:'rf', n:'ГИПЕР-СТРЕЛЬБА', d:'Повышенная скорострельность', f:()=>{player.fireRate=120}},
     {id:'ts', n:'ТРОЙНОЙ СТВОЛ', d:'Постоянная стрельба веером', f:()=>{player.triple=9999}},
-    {id:'hp', n:'НАНО-РЕМОНТ', d:'Восстановление +10 HP', f:()=>{hp+=10}},
+    {id:'hp', n:'НАНО-РЕМОНТ', d:'Восстановление +100% HP', f:()=>{hp+=10}},
     {id:'eg', n:'ЯДЕРНЫЙ ЗАРЯД', d:'Мгновенная энергия X-удара', f:()=>{energy=100}}
 ];
 

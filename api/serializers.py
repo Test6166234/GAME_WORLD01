@@ -3,11 +3,13 @@ from rest_framework import serializers
 from django.core.validators import MaxValueValidator
 from .models import *
 
+
 class PlayerSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     class Meta:
         model = Player
-        fields = ['id', 'score', 'last_seen', 'created_at', 'username']
+        fields = ['id',  'last_seen', 'created_at', 'username']
+
 
 class SnakeScoreSerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,6 +25,7 @@ class ClickerScoreSerializer(serializers.ModelSerializer):
         model = ClickerScore
         fields = ['id', 'score', 'cps', 'mode', 'player', 'date']
 
+
 class TaskSerializer(serializers.ModelSerializer):
     player_id = serializers.IntegerField(source='player.id', read_only=True)
     player_name = serializers.CharField(source='player.user.username', read_only=True)
@@ -31,11 +34,6 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = ['id', 'title', 'description', 'status', 'player_id', 'player_name', 'created_at']
         read_only_fields = ['created_at']
-
-
-
-
-
 
 
 class NeTankScoreSerializer(serializers.ModelSerializer):

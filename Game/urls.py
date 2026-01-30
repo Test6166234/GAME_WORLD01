@@ -29,7 +29,7 @@ urlpatterns = [
     path('clicker/', clicker_view, name='clicker'),
     path('ne-tank/', tank_game_view, name='ne_tank'),
     path('kanban/', kanban_view, name='kanban'),
-    path('players/', players_list_view, name='players_list'),
+
     path('task/<int:task_id>/', task_detail_view, name='task_detail'),
 
     path('api/', include(router.urls)),
